@@ -454,13 +454,26 @@ class CachedVideoPlayerPlusController
     ]);
   }
 
+  static _toCacheKeyFromUrl(String url) {
+    final uri = Uri.parse(url);
+    final queryParam = Map<String, String>.from(uri.queryParameters);
+
+    queryParam.remove('Expires');
+    queryParam.remove('KeyName');
+    queryParam.remove('Signature');
+
+    String result = uri.replace(queryParameters: queryParam).toString();
+
+    if (queryParam.isEmpty) {
+      result = result.replaceAll('?', '');
+    }
+    return result;
+  }
+
   static Future<bool> cache(String dataSource) async {
     await _storage.initStorage;
 
-    dataSource = Uri.parse(dataSource).toString();
-    final uri = Uri.parse(dataSource);
-
-    final key = "${uri.scheme}://${uri.host}${uri.path}";
+    final key = _toCacheKeyFromUrl(dataSource);
 
     FileInfo? cachedFile = await _cacheManager.getFileFromCache(key);
 
@@ -507,8 +520,7 @@ class CachedVideoPlayerPlusController
     late String realDataSource;
     bool isCacheAvailable = false;
 
-    final uri = Uri.parse(dataSource);
-    final key = "${uri.scheme}://${uri.host}${uri.path}";
+    final key = _toCacheKeyFromUrl(dataSource);
 
     if (dataSourceType == DataSourceType.network && _shouldUseCache) {
       FileInfo? cachedFile = await _cacheManager.getFileFromCache(key);
