@@ -461,12 +461,14 @@ class CachedVideoPlayerPlusController
     queryParam.remove('Expires');
     queryParam.remove('KeyName');
     queryParam.remove('Signature');
+    queryParam.remove('Key-Pair-Id');
 
     String result = uri.replace(queryParameters: queryParam).toString();
 
     if (queryParam.isEmpty) {
       result = result.replaceAll('?', '');
     }
+    // debugPrint('!!!!!!!! [TEST] $result');
     return result;
   }
 
@@ -477,15 +479,17 @@ class CachedVideoPlayerPlusController
 
     FileInfo? cachedFile = await _cacheManager.getFileFromCache(key);
 
-    debugPrint('Cached video of [$key]! is: ${cachedFile?.file.path}');
+    // debugPrint('Cached video of [$key]! is: ${cachedFile?.file.path}');
 
     if (cachedFile == null) {
-      await _cacheManager.downloadFile(dataSource, key: key);
+      await _cacheManager.downloadFile(dataSource, key: key).then((fileInfo) {
+        // debugPrint(
+        //     'Cached video ${fileInfo.validTill.toString()} : [$key] successfully.');
+      });
       await _storage.write(
         _getCacheKey(key),
         DateTime.timestamp().millisecondsSinceEpoch,
       );
-      debugPrint('Cached video [$dataSource] successfully.');
     }
 
     return true;
@@ -521,10 +525,11 @@ class CachedVideoPlayerPlusController
     bool isCacheAvailable = false;
 
     final key = _toCacheKeyFromUrl(dataSource);
+    // debugPrint('Cached video of initialize start [$key]');
 
     if (dataSourceType == DataSourceType.network && _shouldUseCache) {
       FileInfo? cachedFile = await _cacheManager.getFileFromCache(key);
-      debugPrint('Cached video of [$key] is: ${cachedFile?.file.path}');
+      // debugPrint('Cached video of [$key] is: ${cachedFile?.file.path}');
 
       if (cachedFile != null) {
         final cachedElapsedMillis = _storage.read(_getCacheKey(key));
@@ -536,18 +541,18 @@ class CachedVideoPlayerPlusController
           );
           final difference = now.difference(cachedDate);
 
-          debugPrint(
-            'Cache for [$key] valid till: '
-            '${cachedDate.add(invalidateCacheIfOlderThan)}',
-          );
+          // debugPrint(
+          //   'Cache for [$key] valid till: '
+          //   '${cachedDate.add(invalidateCacheIfOlderThan)}',
+          // );
 
           if (difference > invalidateCacheIfOlderThan) {
-            debugPrint('Cache of [$key] expired. Removing...');
+            // debugPrint('Cache of [$key] expired. Removing...');
             await _cacheManager.removeFile(key);
             cachedFile = null;
           }
         } else {
-          debugPrint('Cache of [$key] expired. Removing...');
+          // debugPrint('Cache of [$key] expired. Removing...');
           await _cacheManager.removeFile(key);
           cachedFile = null;
         }
@@ -556,12 +561,13 @@ class CachedVideoPlayerPlusController
       if (cachedFile == null) {
         _cacheManager
             .downloadFile(dataSource, authHeaders: httpHeaders)
-            .then((_) {
+            .then((fileInfo) {
           _storage.write(
             _getCacheKey(key),
             DateTime.timestamp().millisecondsSinceEpoch,
           );
-          debugPrint('Cached video [$key] successfully.');
+          // debugPrint(
+          //     'Cached video ${fileInfo.validTill.toString()} : [$key] successfully.');
         });
       } else {
         isCacheAvailable = true;
